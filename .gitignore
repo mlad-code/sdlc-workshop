@@ -1,0 +1,19 @@
+# OS / Editor ignores
+.DS_Store
+*.log
+
+# Worktree directories
+.worktrees/
+
+# Trajectory temporary state
+.trajectory_state.json
+
+# Python ignores
+__pycache__/
+*.py[cod]
+*$py.class
+.env
+.venv/
+dist/
+build/
+*.egg-info/
