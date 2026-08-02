@@ -9,7 +9,7 @@ A comprehensive framework and automation toolkit for teaching and developing pro
 When leading students or engineers through building complex agentic systems, showing the linear evolution from a basic agent to a production-ready multi-agent system can be challenging. Standard git checkouts cause IDE churn and make side-by-side comparison difficult.
 
 This repository provides:
-1. **An Interactive Setup Script (`setup-worktree-repo.sh`)** that prompts for project name, number of demo stages, branch names, and remote repository details—then automatically scaffolds sequential feature branches, local Git Worktrees for live demos, and open GitHub Pull Requests that display clean visual diffs between stages.
+1. **An Interactive Setup Script (`setup-worktree-repo.sh`)** that prompts for project name, number of demo stages, branch names, and optional remote tracking—automatically scaffolding sequential feature branches, local Git Worktrees for live demos, and (if remote tracking is enabled) open GitHub Pull Requests that display clean visual diffs between stages.
 2. **A 4-Stage Progressive Blueprint** for teaching Google ADK application development.
 3. **A Trajectory Walkthrough Toolkit (`walk-trajectories.sh` + `trajectories/`)** to interactively step through and replay the exact prompts that evolved the code at each stage.
 4. **An automated `record-trajectory` Workspace Skill** that records your prompt trajectory as you build each stage for the first time.
@@ -18,13 +18,13 @@ This repository provides:
 
 ## 🚀 Using `setup-worktree-repo.sh` for New Courses
 
-The `setup-worktree-repo.sh` script is an **interactive CLI wizard** that automates creating a new GitHub repository configured for teaching any multi-stage progression.
+The `setup-worktree-repo.sh` script is an **interactive CLI wizard** that automates creating a repository configured for teaching any multi-stage progression.
 
 ### What the Interactive Wizard Prompts For
 1. **Project Directory Name** (e.g. `adk-progressive-agent-course`)
 2. **Number of Stages for Demoing** (default: `4`, supports any positive number)
 3. **Branch Names for Each Stage** (with intelligent defaults like `stage-1-basic-agent`, `stage-2-rag-agent`, etc.)
-4. **Remote GitHub Repository & Visibility** (e.g. `owner/repo-name`, `public` or `private`)
+4. **Optional Remote Repository Tracking** (default: `N` / local-only mode; or specify `Y` to create a GitHub repository and Comparison PRs automatically)
 
 ### Quickstart Guide
 
@@ -43,7 +43,10 @@ The `setup-worktree-repo.sh` script is an **interactive CLI wizard** that automa
    1️⃣  What should I name the project directory? [default: adk-progressive-agent-course]: 
    2️⃣  How many stages will there be for demoing? [default: 4]: 
    ...
+   3️⃣  Should I create a remote GitHub repository for tracking? [y/N, default: N]: 
    ```
+   * If you choose **N (default)**, it sets up a local-only Git repository with `.worktrees/stage-1` through `stage-N` for offline or local demonstrations without publishing anything.
+   * If you choose **Y**, it will also create a GitHub remote via `gh repo create` and open Comparison Pull Requests between stages.
 
 4. **Verify your local Worktree structure**:
    Once execution finishes, navigate into your generated course folder:
@@ -95,9 +98,9 @@ gitGraph
 
 ---
 
-## 🔀 GitHub Comparison PRs as a Teaching Aid
+## 🔀 GitHub Comparison PRs as a Teaching Aid (When Remote Tracking is Enabled)
 
-When teaching, direct your students to the **Pull Requests** tab of the generated GitHub repository. They will see open PRs automatically created between consecutive stages:
+If you enable remote GitHub repository creation during setup, direct your students to the **Pull Requests** tab of the generated repository. They will see open PRs automatically created between consecutive stages:
 * **PR #1**: `stage-2` → base: `stage-1`
 * **PR #2**: `stage-3` → base: `stage-2`
 * ...

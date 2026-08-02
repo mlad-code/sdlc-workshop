@@ -4,7 +4,7 @@
 # Interactive generator for a progressive multi-stage Git repository with:
 #  1. Sequential feature branches (stage 1 -> stage 2 -> ... -> stage N)
 #  2. Local Git Worktrees for live demos (.worktrees/stage-X)
-#  3. GitHub repository creation and Comparison Pull Requests via GitHub CLI (gh)
+#  3. Optional GitHub repository creation and Comparison Pull Requests via GitHub CLI (gh)
 #
 
 set -euo pipefail
@@ -51,17 +51,27 @@ for (( i=1; i<=NUM_STAGES; i++ )); do
   STAGE_BRANCHES+=("$branch_name")
 done
 
-# Question 3: Remote Repository
-DEFAULT_REMOTE="${REPO_NAME}"
-read -p "3️⃣  What remote GitHub repository should I create for tracking? (e.g. 'repo-name' or 'owner/repo') [default: ${DEFAULT_REMOTE}]: " GITHUB_REMOTE
-GITHUB_REMOTE="${GITHUB_REMOTE:-$DEFAULT_REMOTE}"
+# Question 3: Optional Remote Repository Tracking
+echo ""
+read -p "3️⃣  Should I create a remote GitHub repository for tracking? [y/N, default: N]: " CREATE_REMOTE_INPUT
+CREATE_REMOTE="${CREATE_REMOTE_INPUT:-N}"
 
-read -p "   Should the remote repository be public or private? [public/private, default: public]: " VISIBILITY_INPUT
-VISIBILITY_INPUT="${VISIBILITY_INPUT:-public}"
-if [[ "$VISIBILITY_INPUT" =~ ^priv ]]; then
-  REPO_VISIBILITY="--private"
-else
-  REPO_VISIBILITY="--public"
+GITHUB_REMOTE="none (local demo only)"
+REPO_VISIBILITY=""
+VISIBILITY_INPUT="N/A"
+
+if [[ "$CREATE_REMOTE" =~ ^[Yy] ]]; then
+  DEFAULT_REMOTE="${REPO_NAME}"
+  read -p "   What remote GitHub repository name should I create? (e.g. 'repo-name' or 'owner/repo') [default: ${DEFAULT_REMOTE}]: " GITHUB_REMOTE_INPUT
+  GITHUB_REMOTE="${GITHUB_REMOTE_INPUT:-$DEFAULT_REMOTE}"
+
+  read -p "   Should the remote repository be public or private? [public/private, default: public]: " VISIBILITY_INPUT
+  VISIBILITY_INPUT="${VISIBILITY_INPUT:-public}"
+  if [[ "$VISIBILITY_INPUT" =~ ^priv ]]; then
+    REPO_VISIBILITY="--private"
+  else
+    REPO_VISIBILITY="--public"
+  fi
 fi
 
 # Summary confirmation
@@ -72,9 +82,13 @@ echo "================================================================"
 echo "   • Project Directory : ${REPO_NAME}"
 echo "   • Number of Stages  : ${NUM_STAGES}"
 echo "   • Branches          : ${STAGE_BRANCHES[*]}"
-echo "   • GitHub Remote     : ${GITHUB_REMOTE} (${VISIBILITY_INPUT})"
+if [[ "$CREATE_REMOTE" =~ ^[Yy] ]]; then
+  echo "   • GitHub Remote     : ${GITHUB_REMOTE} (${VISIBILITY_INPUT})"
+else
+  echo "   • GitHub Remote     : None (Local demonstration only)"
+fi
 echo "================================================================"
-read -p "▶️  Proceed with scaffolding and GitHub repository setup? [Y/n]: " CONFIRM
+read -p "▶️  Proceed with scaffolding? [Y/n]: " CONFIRM
 CONFIRM="${CONFIRM:-Y}"
 if [[ ! "$CONFIRM" =~ ^[Yy]$ ]]; then
   echo "🛑 Setup canceled."
@@ -155,37 +169,43 @@ done
 echo "✅ Worktrees created successfully!"
 
 # ==============================================================================
-# 5. CREATE GITHUB REPOSITORY & COMPARISON PRs
+# 5. OPTIONAL GITHUB REPOSITORY & COMPARISON PRs
 # ==============================================================================
-if command -v gh &> /dev/null; then
-  echo "🌐 Creating GitHub repository '${GITHUB_REMOTE}' via GitHub CLI..."
-  
-  gh repo create "${GITHUB_REMOTE}" ${REPO_VISIBILITY} --source=. --remote=origin --push
-  
-  echo "⬆️  Pushing progressive branches to GitHub..."
-  for (( i=0; i<NUM_STAGES; i++ )); do
-    branch="${STAGE_BRANCHES[$i]}"
-    git push -u origin "$branch"
-  done
-
-  if (( NUM_STAGES > 1 )); then
-    echo "🔀 Creating GitHub Comparison Pull Requests..."
-    for (( i=0; i<NUM_STAGES-1; i++ )); do
-      base_branch="${STAGE_BRANCHES[$i]}"
-      head_branch="${STAGE_BRANCHES[$i+1]}"
-      stage_from=$((i + 1))
-      stage_to=$((i + 2))
-
-      gh pr create \
-        --base "$base_branch" \
-        --head "$head_branch" \
-        --title "Stage ${stage_to}: Upgrade from ${base_branch} to ${head_branch}" \
-        --body "Comparison PR showing the exact diff from **Stage ${stage_from} (${base_branch})** to **Stage ${stage_to} (${head_branch})**."
+if [[ "$CREATE_REMOTE" =~ ^[Yy] ]]; then
+  if command -v gh &> /dev/null; then
+    echo "🌐 Creating GitHub repository '${GITHUB_REMOTE}' via GitHub CLI..."
+    
+    gh repo create "${GITHUB_REMOTE}" ${REPO_VISIBILITY} --source=. --remote=origin --push
+    
+    echo "⬆️  Pushing progressive branches to GitHub..."
+    for (( i=0; i<NUM_STAGES; i++ )); do
+      branch="${STAGE_BRANCHES[$i]}"
+      git push -u origin "$branch"
     done
-  fi
 
-  echo "🎉 Repository, worktrees, and comparison PRs are ready!"
+    if (( NUM_STAGES > 1 )); then
+      echo "🔀 Creating GitHub Comparison Pull Requests..."
+      for (( i=0; i<NUM_STAGES-1; i++ )); do
+        base_branch="${STAGE_BRANCHES[$i]}"
+        head_branch="${STAGE_BRANCHES[$i+1]}"
+        stage_from=$((i + 1))
+        stage_to=$((i + 2))
+
+        gh pr create \
+          --base "$base_branch" \
+          --head "$head_branch" \
+          --title "Stage ${stage_to}: Upgrade from ${base_branch} to ${head_branch}" \
+          --body "Comparison PR showing the exact diff from **Stage ${stage_from} (${base_branch})** to **Stage ${stage_to} (${head_branch})**."
+      done
+    fi
+
+    echo "🎉 Repository, worktrees, and comparison PRs are ready!"
+  else
+    echo "⚠️  GitHub CLI ('gh') not found. Skipped pushing to GitHub and PR creation."
+    echo "   Install 'gh' from https://cli.github.com to automate GitHub repo & PR creation."
+  fi
 else
-  echo "⚠️  GitHub CLI ('gh') not found. Skipped pushing to GitHub and PR creation."
-  echo "   Install 'gh' from https://cli.github.com to automate GitHub repo & PR creation."
+  echo ""
+  echo "💡 Skipping remote GitHub repository creation (local demonstration mode)."
+  echo "🎉 Local repository, branches, and worktrees are ready in: $(pwd)"
 fi
